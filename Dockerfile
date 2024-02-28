@@ -1,4 +1,5 @@
-FROM node:20-alpine as build
+#FROM node:20-alpine as build
+FROM $BUILD_FROM as build
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -43,8 +44,21 @@ ENV VITE_TURNSTILE_KEY=${TURNSTILE_KEY}
 COPY . ./
 RUN pnpm run build
 
+# Install requirements for add-on
+RUN \
+  apk add --no-cache \
+    python3
+
+# Python 3 HTTP Server serves the current working dir
+# So let's set it to our add-on persistent data directory.
+WORKDIR /data
+
+# Copy data for add-on
+COPY run.sh /
+RUN chmod a+x /run.sh
+
 # production environment
-FROM nginx:stable-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# FROM nginx:stable-alpine
+# COPY --from=build /app/dist /usr/share/nginx/html
+# EXPOSE 80
+CMD ["./run.sh"]
